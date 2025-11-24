@@ -1,0 +1,43 @@
+name: Build, Push & Deploy React App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-react:
+    runs-on: self-hosted
+
+    steps:
+      - name: Clear Workspace
+        run: |
+          git stash --include-untracked || true
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build React App
+        run: |
+          npm install
+          npm run build
+
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "prince0127" --password-stdin
+
+      - name: Build Docker Image
+        run: |
+          docker build -t prince0127/react-app:latest .
+
+      - name: Push Docker Image
+        run: docker push prince0127/react-app:latest
+
+      - name: Deploy React Container
+        run: |
+          docker stop react-app || true
+          docker rm react-app || true
+
+          docker run -d \
+            --name react-app \
+            -p 3010:80 \
+            prince0127/react-app:latest
